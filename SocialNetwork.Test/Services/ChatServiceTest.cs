@@ -25,19 +25,9 @@ public class ChatServiceTest : BaseMessageTestService<IChatService, ChatService>
         var friendService = ServiceProvider.GetRequiredService<IFriendshipService>();
         await friendService.AddFriendshipAsync(user1!.Id, user2!.Id);
 
-        await Service.CreateP2PChat(user1.Id, user2.Id, new ChatModel
-        {
-            Name = "Chat1",
-            Logo = "null",
-            IsGroup = true,
-        });
+        await Service.CreateDirectChat(user1.Id, user2.Id);
         
-        Assert.ThrowsAsync<P2PChatIsExistsException>(async() =>  await Service.CreateP2PChat(user1.Id, user2.Id, new ChatModel
-        {
-            Name = "Chat2",
-            Logo = "null",
-            IsGroup = true,
-        })) ;
+        Assert.ThrowsAsync<P2PChatIsExistsException>(async() =>  await Service.CreateDirectChat(user1.Id, user2.Id)) ;
 
         var paginationModel = new PaginationModel
         {
@@ -45,7 +35,7 @@ public class ChatServiceTest : BaseMessageTestService<IChatService, ChatService>
             PageSize = 10
         };
 
-        var chatList = await Service.FindChatByName(user1.Id, paginationModel, "Chat1");
+        var chatList = await Service.FindChatByName(user1.Id, paginationModel, "");
         var chat = chatList.Data.First();
         foreach (var chatMember in chat.ChatMembers!)
         {
