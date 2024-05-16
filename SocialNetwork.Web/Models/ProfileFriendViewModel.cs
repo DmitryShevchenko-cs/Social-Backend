@@ -7,10 +7,10 @@ public class ProfileFriendViewModel
     public string Name { get; set; } = null!;
 
     public string Surname { get; set; } = null!;
-
-    public string Email { get; set; } = null!;
-
+    
     public string AvatarImage { get; set; } = null!;
 
+    public string Description { get; set; } = null!;
+    
     public Sex Sex { get; set; }
 }

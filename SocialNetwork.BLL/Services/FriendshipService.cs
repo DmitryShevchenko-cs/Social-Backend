@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SocialNetwork.BLL.Helpers;
 using SocialNetwork.BLL.Exceptions;
 using SocialNetwork.BLL.Models;
+using SocialNetwork.BLL.Models.Enums;
 using SocialNetwork.BLL.Services.Interfaces;
 using SocialNetwork.DAL.Entity;
 using SocialNetwork.DAL.Repository;
@@ -74,31 +75,69 @@ public class FriendshipService : IFriendshipService
         await _friendshipRepository.DeleteFriendsAsync(friendship, cancellationToken);
     }
 
-    public async Task<PaginationResultModel<UserModel>> GetAllFriends(int userId, PaginationModel pagination, CancellationToken cancellationToken = default)
+    public async Task<PaginationResultModel<UserModel>> GetAllFriends(int userId, PaginationModel pagination, string? sortType, CancellationToken cancellationToken = default)
     {
         var userDb = await _userRepository.GetByIdAsync(userId, cancellationToken);
         _logger.LogAndThrowErrorIfNull(userDb, new UserNotFoundException("User not found"));
 
-        var users = await _friendshipRepository
-            .GetAllFriendsByUserId(userDb!.Id)
+        SortType? parsedSortType = null;
+        if (sortType is not null)
+        {
+            parsedSortType = SortTypeConverter.ConvertFromString(sortType);
+        }
+        
+        var friendsQuery = _friendshipRepository
+            .GetAllFriendsByUserId(userDb!.Id);
+        
+        var paginationModel = new PaginationResultModel<UserModel>
+        {
+            TotalDbItems = friendsQuery.Select(f => f.UserId == userDb.Id ? f.FriendUser : f.User).Count()
+        };
+        
+        
+        if (parsedSortType.HasValue)
+        {
+            switch (parsedSortType)
+            {
+                case SortType.RecentlyAdded:
+                    friendsQuery = friendsQuery.OrderByDescending(r => r.Id);
+                    break;
+                case SortType.Online:
+                    friendsQuery = friendsQuery.OrderByDescending(u => u.FriendUser.OnlineStatus).ThenByDescending(u => u.User.OnlineStatus);
+                    break;
+                case SortType.FirstName:
+                    friendsQuery = friendsQuery.OrderBy(u => u.FriendUser.Profile.Name).ThenBy(u => u.User.Profile.Name);
+                    break;
+                case SortType.LastName:
+                    friendsQuery = friendsQuery.OrderBy(u => u.FriendUser.Profile.Surname).ThenBy(u => u.User.Profile.Surname);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(parsedSortType), parsedSortType, "Unhandled sortType");
+            }
+        }
+    
+        var users = await friendsQuery
             .Select(f => f.UserId == userDb.Id ? f.FriendUser : f.User)
             .Pagination(pagination.CurrentPage, pagination.PageSize)
             .ToListAsync(cancellationToken);
+
         var userModels = _mapper.Map<IEnumerable<UserModel>>(users);
 
-        var paginationModel = new PaginationResultModel<UserModel>
-        {
-            Data = userModels,
-            CurrentPage = pagination.CurrentPage,
-            PageSize = pagination.PageSize,
-            TotalItems = users.Count,
-        };
-
+        paginationModel.Data = userModels;
+        paginationModel.CurrentPage = pagination.CurrentPage;
+        paginationModel.PageSize = pagination.PageSize;
+        paginationModel.TotalItems = users.Count;
+        
         return paginationModel;
     }
 
+    public async Task<PaginationResultModel<UserModel>> GetAllFriends(int userId, PaginationModel pagination, CancellationToken cancellationToken = default)
+    {
+        return await GetAllFriends(userId, pagination, null, cancellationToken);
+    }
+
     //like
-    public async Task<PaginationResultModel<UserModel>> FindFriendByNameSurname(int userId,PaginationModel pagination, string nameSurname,
+    public async Task<PaginationResultModel<UserModel>> FindFriendByNameSurname(int userId,PaginationModel pagination,string nameSurname, string? sortType,
         CancellationToken cancellationToken = default)
     {
         var userDb = await _userRepository.GetByIdAsync(userId, cancellationToken);
@@ -147,9 +186,16 @@ public class FriendshipService : IFriendshipService
             CurrentPage = pagination.CurrentPage,
             PageSize = pagination.PageSize,
             TotalItems = friends.Count(),
+            TotalDbItems = _friendshipRepository.GetAllFriendsByUserId(userDb!.Id).Select(f => f.UserId == userDb.Id ? f.FriendUser : f.User).Count()
         };
 
         return paginationModel;
+    }
+
+    public async Task<PaginationResultModel<UserModel>> FindFriendByNameSurname(int userId, PaginationModel pagination, string nameSurname,
+        CancellationToken cancellationToken = default)
+    {
+        return await FindFriendByNameSurname(userId, pagination, nameSurname, null, cancellationToken);
     }
 
     public async Task<UserModel> FindFriendByEmail(int userId, string friendEmail,
