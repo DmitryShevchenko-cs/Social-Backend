@@ -38,12 +38,12 @@ public class FriendshipController : ControllerBase
     
     /// <param name="request">mail or name_surname</param>
     [HttpGet] 
-    public async Task<IActionResult> GetFriendship([FromQuery] string? request,[FromQuery] PaginationModel pagination, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetFriendship([FromQuery] string? request, [FromQuery] PaginationModel pagination, [FromQuery] string sortType, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
         if(string.IsNullOrEmpty(request))
         {
-            var userModelFriends = await _friendshipService.GetAllFriends(userId, pagination, cancellationToken);
+            var userModelFriends = await _friendshipService.GetAllFriends(userId, pagination, sortType, cancellationToken);
             return Ok(_mapper.Map<PaginationResultViewModel<FriendViewModel>>(userModelFriends));
         }
         if (request.Contains('@'))
