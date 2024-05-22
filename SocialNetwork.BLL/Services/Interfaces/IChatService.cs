@@ -5,7 +5,7 @@ namespace SocialNetwork.BLL.Services.Interfaces;
 
 public interface IChatService : IBaseService<ChatModel>
 {
-    Task CreateP2PChat(int userId, int user2Id, ChatModel chatModel, CancellationToken cancellationToken = default);
+    Task<ChatModel> CreateDirectChat(int userId, int user2Id, CancellationToken cancellationToken = default);
     Task<ChatModel> CreateGroupChat(int userId, ChatModel chatModel, CancellationToken cancellationToken = default);
     Task<IEnumerable<ChatNotificationModel>> AddUsers(int userId, int chatId, List<int> userIds, CancellationToken cancellationToken = default);
     Task<IEnumerable<ChatNotificationModel>> DelMembers(int userId, int chatId, List<int> userIds, CancellationToken cancellationToken = default);

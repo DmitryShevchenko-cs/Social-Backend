@@ -59,18 +59,13 @@ public class MessageServiceTest : BaseMessageTestService<IMessageService, Messag
         await friendService.AddFriendshipAsync(createdUser1!.Id, createdUser2!.Id);
         
         var chatService = ServiceProvider.GetRequiredService<IChatService>();
-        await chatService.CreateP2PChat(user1.Id, user2.Id, new ChatModel
-        {
-            Name = "Chat1",
-            Logo = "null",
-            IsGroup = true,
-        });
+        await chatService.CreateDirectChat(user1.Id, user2.Id);
         var paginationModel = new PaginationModel
         {
             CurrentPage = 1,
             PageSize = 1
         };
-        var chatList = await chatService.FindChatByName(user1.Id,paginationModel, "Chat1");
+        var chatList = await chatService.FindChatByName(user1.Id,paginationModel, "");
         var chat = chatList.Data.First();
 
         var messageService = ServiceProvider.GetRequiredService<IMessageService>();
